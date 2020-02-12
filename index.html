@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Game of Life</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      canvas {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      let width = 100;
+      let height = 100;
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      canvas.width = width;
+      canvas.height = height;
+      canvas.style.imageRendering = 'pixelated';
+      canvas.style.transform = 'translate(-50%, -50%) scale(2)';
+
+      document.body.appendChild(canvas);
+
+      const game = [];
+
+      const setPixel = (game, x, y, value) => {
+        game[y] || (game[y] = []);
+        game[y][x] = value;
+      };
+
+      const getPixel = (game, x, y) => {
+        return game[y] && game[y][x];
+      }
+
+      function reset () {
+        for (let y = 0; y < width; y++) {
+          for (let x = 0; x < height; x++) {
+            setPixel(game, x, y, 0);
+            if (x > (width / 3) && x < (width - width / 3)) {
+              if (y > (height / 3) && y < (height - height / 3)) {
+                setPixel(game, x, y, (Math.random() < 0.075) ? 1 : 0);
+              }
+            }
+          }
+        }
+      }
+
+      let updating;
+
+      function update () {
+        clearTimeout(updating);
+        updating = setTimeout(update, 1000 / 30);
+
+        let changed = false;
+        let living = 0;
+
+        for (let y = 0; y < width; y++) {
+          for (let x = 0; x < height; x++) {
+            const current = getPixel(game, x, y);
+            const nw = getPixel(game, x - 1, y - 1);
+            const n = getPixel(game, x, y - 1);
+            const ne = getPixel(game, x + 1, y - 1);
+            const w = getPixel(game, x - 1, y);
+            const e = getPixel(game, x + 1, y);
+            const sw = getPixel(game, x - 1, y + 1);
+            const s = getPixel(game, x, y + 1);
+            const se = getPixel(game, x + 1, y + 1);
+
+            const aliveNeighbors = [nw, n, ne, w, e, sw, s, se]
+              .filter(cell => cell)
+              .length;
+
+            if (current) {
+              living++;
+              if (aliveNeighbors < 2 || aliveNeighbors > 3) {
+                setPixel(game, x, y, 0);
+                changed = true;
+              }
+            } else {
+              if (aliveNeighbors === 3) {
+                setPixel(game, x, y, 1);
+                changed = true;
+              }
+            }
+          }
+        }
+        if (living === 0) {
+          reset();
+        } else if (!changed || living / (width * height) > 0.375) {
+          clearTimeout(updating);
+          setTimeout(() => {
+            reset();
+            update();
+          }, 1000);
+        }
+      }
+
+      function render () {
+        requestAnimationFrame(render);
+
+        const imageData = ctx.createImageData(width, height);
+
+        for (let i = 0; i < imageData.data.length; i += 4) {
+          const x = (i / 4) % width;
+          const y = Math.floor((i / 4) / width);
+          const pixel = getPixel(game, x, y);
+
+          imageData.data[i] = 255 - pixel * 255;
+          imageData.data[i + 1] = 255 - pixel * 255;
+          imageData.data[i + 2] = 255 - pixel * 255;
+          imageData.data[i + 3] = 255 * pixel;
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+      }
+
+      reset();
+      update();
+      render();
+    </script>
+  </body>
+</html>
